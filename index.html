@@ -1,0 +1,391 @@
+---
+---
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="按图片原始宽高比展示、支持主题筛选与大图查看的个人摄影档案。">
+  <title>Jienice · 图像档案</title>
+  <link rel="icon" href="public/favicon.svg">
+  <style>
+    :root {
+      --bg: oklch(84.52% 0 89.88);
+      --surface: oklch(100% 0 89.88);
+      --fg: oklch(30.12% 0 89.88);
+      --muted: oklch(60.66% 0 89.88);
+      --border: oklch(91.89% 0 89.88);
+      --accent: oklch(0% 0 0);
+      --nav-surface: oklch(95.5% 0 89.88);
+      --subtle: oklch(73% 0 89.88);
+      --font-display: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --font-body: "Arial Narrow", "Roboto Condensed", Arial, sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; font-weight: 400; line-height: 1.55; }
+    body.viewer-open { overflow: hidden; }
+    button, input { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    a { color: inherit; }
+    [hidden] { display: none !important; }
+
+    .site-shell { position: relative; display: block; width: min(1240px, calc(100% - 48px)); min-height: 100vh; margin: 0 auto; background: var(--surface); box-shadow: 0 0 0 1px color-mix(in oklch, var(--fg) 8%, transparent); }
+    .content { min-width: 0; padding: 72px clamp(28px, 5vw, 74px) 44px; }
+    .content-head { padding-bottom: 0; border-bottom: 0; }
+    h1, h2 { font-family: var(--font-display); }
+    h1 { margin: 0; font-size: clamp(34px, 4.1vw, 56px); font-weight: 400; line-height: 1.05; letter-spacing: -.025em; }
+
+    .archive-controls { padding: 8px 0 40px; }
+    .region-filter { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px; }
+    .region-filter button { min-height: 44px; padding: 0 13px; color: var(--muted); background: transparent; border: 0; border-bottom: 1px solid transparent; cursor: pointer; font-size: 13px; letter-spacing: .02em; }
+    .region-filter button:hover, .region-filter button:focus-visible { color: var(--fg); }
+    .region-filter button.selected { color: var(--fg); border-bottom-color: var(--accent); }
+    .region-filter button:focus-visible,
+    .empty-state button:focus-visible,
+    .viewer-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    .archive-grid { column-count: 4; column-gap: clamp(11px, 1.5vw, 22px); }
+    .archive-card { display: inline-block; width: 100%; margin: 0 0 clamp(28px, 3vw, 44px); break-inside: avoid; page-break-inside: avoid; vertical-align: top; text-align: center; }
+    .archive-grid.is-sparse { display: flex; flex-wrap: wrap; column-count: initial; gap: clamp(28px, 3vw, 44px) clamp(11px, 1.5vw, 22px); align-items: flex-start; }
+    .archive-grid.is-sparse .archive-card { display: block; flex: 0 0 var(--card-width, 240px); width: var(--card-width, 240px); margin-bottom: 0; }
+    .image-button { position: relative; display: block; width: 100%; min-height: 0; padding: 0; overflow: hidden; background: var(--nav-surface); border: 0; cursor: zoom-in; }
+    .image-button img { display: block; width: 100%; height: auto; object-fit: contain; opacity: 0; transform: translateY(8px) scale(.99); filter: grayscale(1); transition: transform 160ms cubic-bezier(.2,0,0,1), filter 160ms ease; will-change: opacity, transform; }
+    .image-button img.is-loaded { opacity: 1; transform: translateY(0) scale(1); animation: image-reveal 320ms cubic-bezier(.2,0,0,1) backwards; }
+    .archive-card:hover .image-button img.is-loaded, .image-button:focus-visible img.is-loaded { transform: translateY(0) scale(1.035); filter: grayscale(.92); }
+    .image-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
+    .image-button.is-error { cursor: default; }
+    .image-button.is-error img { display: none; }
+    .image-button.is-error::after { content: attr(data-error); display: grid; min-height: 96px; place-items: center; padding: 20px; color: var(--muted); font-size: 12px; letter-spacing: .02em; }
+    .card-copy { padding-top: 13px; text-align: left; }
+    .card-copy h2 { margin: 0; font-size: 15px; font-weight: 510; line-height: 1.3; letter-spacing: -.01em; }
+    .card-copy p { margin: 4px 0 0; color: var(--subtle); font-family: var(--font-mono); font-size: 11px; letter-spacing: .02em; }
+
+    .empty-state { padding: 90px 20px; text-align: center; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .empty-state h2 { margin: 0; font-size: 24px; font-weight: 400; letter-spacing: -.01em; }
+    .empty-state p { color: var(--muted); }
+    .empty-state button { min-height: 44px; padding: 0 18px; color: var(--surface); background: var(--accent); border: 0; cursor: pointer; letter-spacing: .02em; }
+    .archive-footer { display: flex; justify-content: space-between; gap: 24px; margin-top: 90px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--subtle); font-size: 10px; letter-spacing: .08em; }
+
+    .viewer-backdrop { position: fixed; z-index: 30; inset: 0; display: grid; place-items: center; padding: 24px; background: color-mix(in oklch, var(--fg) 84%, transparent); }
+    .viewer { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 28px; width: min(900px, 100%); max-height: calc(100vh - 48px); padding: 38px; background: var(--surface); box-shadow: 0 28px 90px color-mix(in oklch, var(--accent) 32%, transparent); }
+    .viewer-image-wrap { display: grid; place-items: center; min-height: 420px; overflow: hidden; background: var(--nav-surface); }
+    .viewer-image-wrap img { display: block; width: auto; max-width: 100%; height: auto; max-height: calc(100vh - 124px); object-fit: contain; image-rendering: auto; }
+    .viewer-caption { align-self: end; }
+    .viewer-caption h2 { margin: 0; font-size: 24px; font-weight: 400; letter-spacing: -.01em; }
+    .viewer-caption p { margin: 7px 0 0; color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+    .viewer-close { position: absolute; top: 10px; right: 12px; min-width: 54px; min-height: 44px; padding: 0; color: var(--muted); background: transparent; border: 0; cursor: pointer; font-size: 12px; letter-spacing: .02em; }
+    .viewer-close:hover { color: var(--fg); }
+
+    @keyframes image-reveal {
+      from { opacity: 0; transform: translateY(8px) scale(.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (max-width: 980px) {
+      .site-shell { width: min(100% - 24px, 980px); }
+      .content { padding-inline: 34px; }
+      .archive-grid { column-count: 3; }
+    }
+    @media (max-width: 700px) {
+      html, body { background: var(--surface); }
+      .site-shell { display: block; width: 100%; box-shadow: none; }
+      .content { padding: 36px 20px 34px; }
+      .content-head { padding-bottom: 0; }
+      h1 { font-size: clamp(36px, 12vw, 50px); }
+      .archive-controls { padding: 8px 0 34px; }
+      .region-filter { gap: 4px; }
+      .region-filter button { flex: 0 0 auto; padding-inline: 10px; }
+      .archive-grid { column-count: 2; column-gap: 11px; }
+      .archive-grid.is-sparse { gap: 34px 11px; }
+      .archive-card { margin-bottom: 34px; }
+      .archive-grid.is-sparse .archive-card { margin-bottom: 0; }
+      .archive-footer { display: block; margin-top: 70px; }
+      .viewer { display: block; padding: 56px 20px 22px; }
+      .viewer-image-wrap { min-height: 320px; }
+      .viewer-image-wrap img { max-height: calc(100vh - 190px); }
+      .viewer-caption { padding-top: 16px; }
+    }
+    @media (max-width: 390px) {
+      .content { padding-inline: 16px; }
+      .archive-grid { column-gap: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+      .image-button img,
+      .image-button img.is-loaded,
+      .archive-card:hover .image-button img.is-loaded,
+      .image-button:focus-visible img.is-loaded { opacity: 1; transform: none; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="site-shell" data-od-id="image-archive-page">
+    <section class="content" id="archive" data-od-id="archive-content">
+      <div class="content-head">
+        <h1 data-od-id="archive-heading">地点与时间</h1>
+      </div>
+
+      <div class="archive-controls" id="search" data-od-id="archive-controls">
+        <div class="region-filter" id="region-filter" role="group" aria-label="按主题筛选"></div>
+      </div>
+
+      <div class="archive-grid" id="archive-grid" data-od-id="archive-grid"></div>
+      <div class="empty-state" id="empty-state" data-od-id="empty-search-state" hidden>
+        <h2>没有匹配的档案</h2>
+        <p>选择“全部”以查看完整档案。</p>
+        <button id="clear-filter" type="button">清除筛选</button>
+      </div>
+
+      <footer id="footer" class="archive-footer" data-od-id="archive-footer">
+        <p>JIENICE · PHOTOGRAPHIC ARCHIVE</p>
+        <p>个人摄影档案 · 影像版权归本站作者所有</p>
+      </footer>
+    </section>
+  </main>
+
+  <div class="viewer-backdrop" id="viewer-backdrop" role="presentation" hidden>
+    <section class="viewer" role="dialog" aria-modal="true" aria-labelledby="viewer-title" data-od-id="image-viewer">
+      <button class="viewer-close" id="viewer-close" type="button" aria-label="关闭图片查看器">关闭</button>
+      <div class="viewer-image-wrap"><img id="viewer-image" src="" alt=""></div>
+      <div class="viewer-caption"><h2 id="viewer-title"></h2><p id="viewer-meta"></p></div>
+    </section>
+  </div>
+
+  <script>
+    {% assign image_extensions = ".jpg,.jpeg,.png,.webp,.avif" | split: "," %}
+    {% assign archive_files = site.static_files | sort: "path" %}
+    const archiveFiles = [
+      {% for file in archive_files %}
+        {% assign extension = file.extname | downcase %}
+        {% if file.path contains "/public/archive/" and image_extensions contains extension %}
+          {
+            name: {{ file.basename | jsonify }},
+            src: {{ file.path | relative_url | jsonify }},
+            path: {{ file.path | jsonify }},
+            modified: {{ file.modified_time | date: "%Y.%m.%d" | jsonify }}
+          },
+        {% endif %}
+      {% endfor %}
+    ];
+
+    function titleFromFilename(filename) {
+      return filename.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim() || "未命名影像";
+    }
+
+    function categoryFromPath(path) {
+      const parts = path.split("/").filter(Boolean);
+      const archiveIndex = parts.indexOf("archive");
+      if (archiveIndex < 0 || archiveIndex >= parts.length - 2) return "未分类";
+      return titleFromFilename(parts[archiveIndex + 1]);
+    }
+
+    const archive = archiveFiles.map((file, index) => {
+      const slug = file.name.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
+      return {
+        slug: slug || `archive-${index + 1}`,
+        title: titleFromFilename(file.name),
+        years: file.modified || "未标注日期",
+        region: categoryFromPath(file.path),
+        src: file.src,
+        width: null,
+        height: null
+      };
+    });
+    const regions = ["全部", ...new Set(archive.map((item) => item.region))];
+    const state = { region: "全部" };
+    const grid = document.querySelector("#archive-grid");
+    const emptyState = document.querySelector("#empty-state");
+    const regionFilter = document.querySelector("#region-filter");
+    const siteShell = document.querySelector(".site-shell");
+    const viewerBackdrop = document.querySelector("#viewer-backdrop");
+    const viewerImage = document.querySelector("#viewer-image");
+    const viewerTitle = document.querySelector("#viewer-title");
+    const viewerMeta = document.querySelector("#viewer-meta");
+    const viewerClose = document.querySelector("#viewer-close");
+    let previousFocus = null;
+
+    function renderRegions() {
+      regionFilter.replaceChildren(...regions.map((region) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = region;
+        button.className = state.region === region ? "selected" : "";
+        button.setAttribute("aria-pressed", String(state.region === region));
+        button.addEventListener("click", () => { state.region = region; render(); });
+        return button;
+      }));
+    }
+
+    function filteredItems() {
+      return archive.filter((item) => state.region === "全部" || item.region === state.region);
+    }
+
+    function createCard(item) {
+      const article = document.createElement("article");
+      article.className = "archive-card";
+      article.dataset.odId = `archive-card-${item.slug}`;
+      article.dataset.aspect = String(item.width / item.height);
+      const button = document.createElement("button");
+      button.className = "image-button";
+      button.type = "button";
+      button.setAttribute("aria-label", `查看${item.title}摄影作品`);
+      button.dataset.error = "图片暂不可用";
+      button.addEventListener("click", () => openViewer(item));
+      const image = document.createElement("img");
+      image.src = item.src;
+      if (item.width && item.height) {
+        image.width = item.width;
+        image.height = item.height;
+      }
+      image.loading = "lazy";
+      image.alt = `${item.title}摄影作品`;
+      let revealQueued = false;
+      const revealImage = () => {
+        if (revealQueued) return;
+        revealQueued = true;
+        if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+          article.dataset.aspect = String(image.naturalWidth / image.naturalHeight);
+          scheduleSparseLayout();
+        }
+        requestAnimationFrame(() => requestAnimationFrame(() => image.classList.add("is-loaded")));
+      };
+      image.addEventListener("load", revealImage, { once: true });
+      image.addEventListener("error", () => {
+        button.classList.add("is-error");
+        button.disabled = true;
+        button.setAttribute("aria-label", `${item.title}图片暂不可用`);
+        revealImage();
+      }, { once: true });
+      button.append(image);
+      if (image.complete) revealImage();
+      const copy = document.createElement("div");
+      copy.className = "card-copy";
+      const title = document.createElement("h2");
+      title.textContent = `#${item.title}`;
+      const years = document.createElement("p");
+      years.textContent = item.years;
+      copy.append(title, years);
+      article.append(button, copy);
+      return article;
+    }
+
+    let sparseLayoutFrame = 0;
+
+    function layoutSparseRows() {
+      if (!grid.classList.contains("is-sparse") || grid.hidden) return;
+      const cards = [...grid.querySelectorAll(".archive-card")];
+      const containerWidth = grid.clientWidth;
+      if (!cards.length || containerWidth <= 0) return;
+
+      const columnGap = Number.parseFloat(getComputedStyle(grid).columnGap) || 0;
+      const divisor = containerWidth < 520 ? 2.15 : containerWidth < 820 ? 3.1 : 4.4;
+      const targetHeight = Math.max(145, Math.min(320, containerWidth / divisor));
+      const maxFillHeight = targetHeight * 1.22;
+      let row = [];
+      let aspectSum = 0;
+
+      const applyRow = (rowCards, rowAspect, allowFill) => {
+        const availableWidth = Math.max(1, containerWidth - columnGap * (rowCards.length - 1) - 0.5);
+        const fittedHeight = availableWidth / rowAspect;
+        const rowHeight = allowFill && fittedHeight <= maxFillHeight
+          ? fittedHeight
+          : Math.min(targetHeight, fittedHeight);
+
+        rowCards.forEach((card) => {
+          const aspect = Number.parseFloat(card.dataset.aspect) || 1;
+          card.style.setProperty("--card-width", `${Math.max(1, aspect * rowHeight).toFixed(2)}px`);
+        });
+      };
+
+      cards.forEach((card) => {
+        row.push(card);
+        aspectSum += Number.parseFloat(card.dataset.aspect) || 1;
+        const projectedWidth = aspectSum * targetHeight + columnGap * (row.length - 1);
+        if (projectedWidth >= containerWidth) {
+          const fittedHeight = (containerWidth - columnGap * (row.length - 1) - 0.5) / aspectSum;
+          if (row.length > 1 && fittedHeight < targetHeight * 0.72) {
+            const nextRowCard = row.pop();
+            const nextRowAspect = Number.parseFloat(nextRowCard.dataset.aspect) || 1;
+            aspectSum -= nextRowAspect;
+            applyRow(row, aspectSum, true);
+            row = [nextRowCard];
+            aspectSum = nextRowAspect;
+          } else {
+            applyRow(row, aspectSum, true);
+            row = [];
+            aspectSum = 0;
+          }
+        }
+      });
+
+      if (row.length) {
+        const fittedHeight = (containerWidth - columnGap * (row.length - 1) - 0.5) / aspectSum;
+        applyRow(row, aspectSum, fittedHeight <= maxFillHeight);
+      }
+    }
+
+    function scheduleSparseLayout() {
+      cancelAnimationFrame(sparseLayoutFrame);
+      sparseLayoutFrame = requestAnimationFrame(layoutSparseRows);
+    }
+
+    function render() {
+      renderRegions();
+      const items = filteredItems();
+      grid.classList.toggle("is-sparse", state.region !== "全部");
+      grid.replaceChildren(...items.map(createCard));
+      grid.hidden = items.length === 0;
+      emptyState.hidden = items.length !== 0;
+      scheduleSparseLayout();
+    }
+
+    function openViewer(item) {
+      previousFocus = document.activeElement;
+      viewerImage.src = item.src;
+      if (item.width && item.height) {
+        viewerImage.width = item.width;
+        viewerImage.height = item.height;
+      } else {
+        viewerImage.removeAttribute("width");
+        viewerImage.removeAttribute("height");
+      }
+      viewerImage.alt = `${item.title}摄影作品大图`;
+      viewerTitle.textContent = item.title;
+      viewerMeta.textContent = `${item.years} · ${item.region}`;
+      viewerBackdrop.hidden = false;
+      document.body.classList.add("viewer-open");
+      siteShell.inert = true;
+      viewerClose.focus();
+    }
+
+    function closeViewer() {
+      viewerBackdrop.hidden = true;
+      document.body.classList.remove("viewer-open");
+      siteShell.inert = false;
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    }
+
+    document.querySelector("#clear-filter").addEventListener("click", () => {
+      state.region = "全部";
+      render();
+    });
+    viewerClose.addEventListener("click", closeViewer);
+    viewerBackdrop.addEventListener("mousedown", (event) => { if (event.target === viewerBackdrop) closeViewer(); });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !viewerBackdrop.hidden) closeViewer();
+      if (event.key === "Tab" && !viewerBackdrop.hidden) {
+        event.preventDefault();
+        viewerClose.focus();
+      }
+    });
+    if ("ResizeObserver" in window) {
+      new ResizeObserver(scheduleSparseLayout).observe(grid);
+    } else {
+      window.addEventListener("resize", scheduleSparseLayout);
+    }
+    render();
+  </script>
+</body>
+</html>

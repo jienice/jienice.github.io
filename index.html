@@ -36,11 +36,11 @@
     h2 { font-family: var(--font-display); }
 
     .archive-controls { padding: 8px 0 40px; }
-    .region-filter { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px; }
-    .region-filter button { min-height: 44px; padding: 0 13px; color: var(--muted); background: transparent; border: 0; border-bottom: 1px solid transparent; cursor: pointer; font-size: 13px; letter-spacing: .02em; }
-    .region-filter button:hover, .region-filter button:focus-visible { color: var(--fg); }
-    .region-filter button.selected { color: var(--fg); border-bottom-color: var(--accent); }
-    .region-filter button:focus-visible,
+    .year-filter { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px; }
+    .year-filter button { min-height: 44px; padding: 0 13px; color: var(--muted); background: transparent; border: 0; border-bottom: 1px solid transparent; cursor: pointer; font-size: 13px; letter-spacing: .02em; }
+    .year-filter button:hover, .year-filter button:focus-visible { color: var(--fg); }
+    .year-filter button.selected { color: var(--fg); border-bottom-color: var(--accent); }
+    .year-filter button:focus-visible,
     .empty-state button:focus-visible,
     .viewer-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
@@ -56,9 +56,7 @@
     .image-button.is-error img { display: none; }
     .image-button.is-error::after { content: attr(data-error); display: grid; min-height: 96px; place-items: center; padding: 20px; color: var(--muted); font-size: 12px; letter-spacing: .02em; }
     .card-copy { padding-top: 13px; text-align: left; }
-    .card-copy h2 { margin: 0; font-size: 15px; font-weight: 510; line-height: 1.3; letter-spacing: -.01em; }
-    .card-copy p { margin: 4px 0 0; color: var(--subtle); font-family: var(--font-mono); font-size: 11px; letter-spacing: .02em; }
-    .card-copy .card-tags { color: var(--muted); }
+    .card-copy p { margin: 0; color: var(--subtle); font-family: var(--font-mono); font-size: 11px; letter-spacing: .02em; }
 
     .empty-state { padding: 90px 20px; text-align: center; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
     .empty-state h2 { margin: 0; font-size: 24px; font-weight: 400; letter-spacing: -.01em; }
@@ -67,12 +65,11 @@
     .archive-footer { display: flex; justify-content: space-between; gap: 24px; margin-top: 90px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--subtle); font-size: 10px; letter-spacing: .08em; }
 
     .viewer-backdrop { position: fixed; z-index: 30; inset: 0; display: grid; place-items: center; padding: 24px; background: color-mix(in oklch, var(--fg) 84%, transparent); }
-    .viewer { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 28px; width: min(900px, 100%); max-height: calc(100vh - 48px); padding: 38px; background: var(--surface); box-shadow: 0 28px 90px color-mix(in oklch, var(--accent) 32%, transparent); }
-    .viewer-image-wrap { display: grid; place-items: center; min-height: 420px; overflow: hidden; background: var(--nav-surface); }
-    .viewer-image-wrap img { display: block; width: auto; max-width: 100%; height: auto; max-height: calc(100vh - 124px); object-fit: contain; image-rendering: auto; }
-    .viewer-caption { align-self: end; }
-    .viewer-caption h2 { margin: 0; font-size: 24px; font-weight: 400; letter-spacing: -.01em; }
-    .viewer-caption p { margin: 7px 0 0; color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+    .viewer { position: relative; display: block; width: min(900px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; padding: 38px; background: var(--surface); box-shadow: 0 28px 90px color-mix(in oklch, var(--accent) 32%, transparent); }
+    .viewer-image-wrap { display: grid; place-items: center; min-height: 420px; overflow: hidden; background: #fff; }
+    .viewer-image-wrap img { display: block; width: auto; max-width: 100%; height: auto; max-height: calc(100vh - 190px); object-fit: contain; image-rendering: auto; }
+    .viewer-caption { padding-top: 16px; text-align: left; }
+    .viewer-caption p { margin: 0; color: var(--muted); font-family: var(--font-mono); font-size: 11px; line-height: 1.7; }
     .viewer-close { position: absolute; top: 10px; right: 12px; min-width: 54px; min-height: 44px; padding: 0; color: var(--muted); background: transparent; border: 0; cursor: pointer; font-size: 12px; letter-spacing: .02em; }
     .viewer-close:hover { color: var(--fg); }
 
@@ -86,17 +83,16 @@
       .site-shell { display: block; width: 100%; box-shadow: none; }
       .content { padding: 36px 20px 34px; }
       .archive-controls { padding: 8px 0 34px; }
-      .region-filter { gap: 4px; }
-      .region-filter button { flex: 0 0 auto; padding-inline: 10px; }
+      .year-filter { gap: 4px; }
+      .year-filter button { flex: 0 0 auto; padding-inline: 10px; }
       .archive-grid { column-count: 2; column-gap: 11px; }
       .archive-grid.is-sparse { gap: 34px 11px; }
       .archive-card { margin-bottom: 34px; }
       .archive-grid.is-sparse .archive-card { margin-bottom: 0; }
       .archive-footer { display: block; margin-top: 70px; }
-      .viewer { display: block; padding: 56px 20px 22px; }
+      .viewer { padding: 56px 20px 22px; }
       .viewer-image-wrap { min-height: 320px; }
-      .viewer-image-wrap img { max-height: calc(100vh - 190px); }
-      .viewer-caption { padding-top: 16px; }
+      .viewer-image-wrap img { max-height: calc(100vh - 210px); }
     }
     @media (max-width: 390px) {
       .content { padding-inline: 16px; }
@@ -114,7 +110,7 @@
   <main class="site-shell" data-od-id="image-archive-page">
     <section class="content" id="archive" data-od-id="archive-content">
       <div class="archive-controls" id="search" data-od-id="archive-controls">
-        <div class="region-filter" id="region-filter" role="group" aria-label="按主题筛选"></div>
+        <div class="year-filter" id="year-filter" role="group" aria-label="按年份筛选"></div>
       </div>
 
       <div class="archive-grid" id="archive-grid" data-od-id="archive-grid"></div>
@@ -132,10 +128,10 @@
   </main>
 
   <div class="viewer-backdrop" id="viewer-backdrop" role="presentation" hidden>
-    <section class="viewer" role="dialog" aria-modal="true" aria-labelledby="viewer-title" data-od-id="image-viewer">
+    <section class="viewer" role="dialog" aria-modal="true" aria-describedby="viewer-meta" data-od-id="image-viewer">
       <button class="viewer-close" id="viewer-close" type="button" aria-label="关闭图片查看器">关闭</button>
       <div class="viewer-image-wrap"><img id="viewer-image" src="" alt=""></div>
-      <div class="viewer-caption"><h2 id="viewer-title"></h2><p id="viewer-meta"></p></div>
+      <div class="viewer-caption" id="viewer-meta"><p id="viewer-tags"></p><p id="viewer-date"></p></div>
     </section>
   </div>
 
@@ -190,39 +186,40 @@
         slug: slug || `archive-${index + 1}`,
         title: parsed.title,
         years: parsed.years,
+        year: parsed.years.match(/^\d{4}/)?.[0] || "未标注",
         tags: parsed.tags,
         src: file.src,
         width: null,
         height: null
       };
     });
-    const regions = ["全部", ...new Set(archive.flatMap((item) => item.tags))];
-    const state = { region: "全部" };
+    const archiveYears = ["全部", ...new Set(archive.map((item) => item.year).sort((a, b) => b.localeCompare(a, "zh-CN")))];
+    const state = { year: "全部" };
     const grid = document.querySelector("#archive-grid");
     const emptyState = document.querySelector("#empty-state");
-    const regionFilter = document.querySelector("#region-filter");
+    const yearFilter = document.querySelector("#year-filter");
     const siteShell = document.querySelector(".site-shell");
     const viewerBackdrop = document.querySelector("#viewer-backdrop");
     const viewerImage = document.querySelector("#viewer-image");
-    const viewerTitle = document.querySelector("#viewer-title");
-    const viewerMeta = document.querySelector("#viewer-meta");
+    const viewerTags = document.querySelector("#viewer-tags");
+    const viewerDate = document.querySelector("#viewer-date");
     const viewerClose = document.querySelector("#viewer-close");
     let previousFocus = null;
 
-    function renderRegions() {
-      regionFilter.replaceChildren(...regions.map((region) => {
+    function renderYears() {
+      yearFilter.replaceChildren(...archiveYears.map((year) => {
         const button = document.createElement("button");
         button.type = "button";
-        button.textContent = region;
-        button.className = state.region === region ? "selected" : "";
-        button.setAttribute("aria-pressed", String(state.region === region));
-        button.addEventListener("click", () => { state.region = region; render(); });
+        button.textContent = year;
+        button.className = state.year === year ? "selected" : "";
+        button.setAttribute("aria-pressed", String(state.year === year));
+        button.addEventListener("click", () => { state.year = year; render(); });
         return button;
       }));
     }
 
     function filteredItems() {
-      return archive.filter((item) => state.region === "全部" || item.tags.includes(state.region));
+      return archive.filter((item) => state.year === "全部" || item.year === state.year);
     }
 
     function createCard(item) {
@@ -259,14 +256,9 @@
       if (image.complete) updateImageAspect();
       const copy = document.createElement("div");
       copy.className = "card-copy";
-      const title = document.createElement("h2");
-      title.textContent = `#${item.title}`;
       const years = document.createElement("p");
       years.textContent = item.years;
-      const tags = document.createElement("p");
-      tags.className = "card-tags";
-      tags.textContent = item.tags.map((tag) => `#${tag}`).join(" ");
-      copy.append(title, years, tags);
+      copy.append(years);
       article.append(button, copy);
       return article;
     }
@@ -332,9 +324,9 @@
     }
 
     function render() {
-      renderRegions();
+      renderYears();
       const items = filteredItems();
-      grid.classList.toggle("is-sparse", state.region !== "全部");
+      grid.classList.toggle("is-sparse", state.year !== "全部");
       grid.replaceChildren(...items.map(createCard));
       grid.hidden = items.length === 0;
       emptyState.hidden = items.length !== 0;
@@ -352,8 +344,8 @@
         viewerImage.removeAttribute("height");
       }
       viewerImage.alt = `${item.title}摄影作品大图`;
-      viewerTitle.textContent = item.title;
-      viewerMeta.textContent = `${item.years} · ${item.tags.map((tag) => `#${tag}`).join(" · ")}`;
+      viewerTags.textContent = item.tags.map((tag) => `#${tag}`).join(" ");
+      viewerDate.textContent = item.years;
       viewerBackdrop.hidden = false;
       document.body.classList.add("viewer-open");
       siteShell.inert = true;
@@ -368,7 +360,7 @@
     }
 
     document.querySelector("#clear-filter").addEventListener("click", () => {
-      state.region = "全部";
+      state.year = "全部";
       render();
     });
     viewerClose.addEventListener("click", closeViewer);

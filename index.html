@@ -33,9 +33,7 @@
 
     .site-shell { position: relative; display: block; width: min(1240px, calc(100% - 48px)); min-height: 100vh; margin: 0 auto; background: var(--surface); box-shadow: 0 0 0 1px color-mix(in oklch, var(--fg) 8%, transparent); }
     .content { min-width: 0; padding: 72px clamp(28px, 5vw, 74px) 44px; }
-    .content-head { padding-bottom: 0; border-bottom: 0; }
-    h1, h2 { font-family: var(--font-display); }
-    h1 { margin: 0; font-size: clamp(34px, 4.1vw, 56px); font-weight: 400; line-height: 1.05; letter-spacing: -.025em; }
+    h2 { font-family: var(--font-display); }
 
     .archive-controls { padding: 8px 0 40px; }
     .region-filter { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px; }
@@ -51,9 +49,8 @@
     .archive-grid.is-sparse { display: flex; flex-wrap: wrap; column-count: initial; gap: clamp(28px, 3vw, 44px) clamp(11px, 1.5vw, 22px); align-items: flex-start; }
     .archive-grid.is-sparse .archive-card { display: block; flex: 0 0 var(--card-width, 240px); width: var(--card-width, 240px); margin-bottom: 0; }
     .image-button { position: relative; display: block; width: 100%; min-height: 0; padding: 0; overflow: hidden; background: var(--nav-surface); border: 0; cursor: zoom-in; }
-    .image-button img { display: block; width: 100%; height: auto; object-fit: contain; opacity: 0; transform: translateY(8px) scale(.99); filter: grayscale(1); transition: transform 160ms cubic-bezier(.2,0,0,1), filter 160ms ease; will-change: opacity, transform; }
-    .image-button img.is-loaded { opacity: 1; transform: translateY(0) scale(1); animation: image-reveal 320ms cubic-bezier(.2,0,0,1) backwards; }
-    .archive-card:hover .image-button img.is-loaded, .image-button:focus-visible img.is-loaded { transform: translateY(0) scale(1.035); filter: grayscale(.92); }
+    .image-button img { display: block; width: 100%; height: auto; object-fit: contain; opacity: 1; transform: none; filter: none; transition: transform 160ms cubic-bezier(.2,0,0,1); }
+    .archive-card:hover .image-button img, .image-button:focus-visible img { transform: scale(1.035); }
     .image-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
     .image-button.is-error { cursor: default; }
     .image-button.is-error img { display: none; }
@@ -61,6 +58,7 @@
     .card-copy { padding-top: 13px; text-align: left; }
     .card-copy h2 { margin: 0; font-size: 15px; font-weight: 510; line-height: 1.3; letter-spacing: -.01em; }
     .card-copy p { margin: 4px 0 0; color: var(--subtle); font-family: var(--font-mono); font-size: 11px; letter-spacing: .02em; }
+    .card-copy .card-tags { color: var(--muted); }
 
     .empty-state { padding: 90px 20px; text-align: center; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
     .empty-state h2 { margin: 0; font-size: 24px; font-weight: 400; letter-spacing: -.01em; }
@@ -78,11 +76,6 @@
     .viewer-close { position: absolute; top: 10px; right: 12px; min-width: 54px; min-height: 44px; padding: 0; color: var(--muted); background: transparent; border: 0; cursor: pointer; font-size: 12px; letter-spacing: .02em; }
     .viewer-close:hover { color: var(--fg); }
 
-    @keyframes image-reveal {
-      from { opacity: 0; transform: translateY(8px) scale(.99); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
     @media (max-width: 980px) {
       .site-shell { width: min(100% - 24px, 980px); }
       .content { padding-inline: 34px; }
@@ -92,8 +85,6 @@
       html, body { background: var(--surface); }
       .site-shell { display: block; width: 100%; box-shadow: none; }
       .content { padding: 36px 20px 34px; }
-      .content-head { padding-bottom: 0; }
-      h1 { font-size: clamp(36px, 12vw, 50px); }
       .archive-controls { padding: 8px 0 34px; }
       .region-filter { gap: 4px; }
       .region-filter button { flex: 0 0 auto; padding-inline: 10px; }
@@ -114,19 +105,14 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
       .image-button img,
-      .image-button img.is-loaded,
-      .archive-card:hover .image-button img.is-loaded,
-      .image-button:focus-visible img.is-loaded { opacity: 1; transform: none; animation: none !important; }
+      .archive-card:hover .image-button img,
+      .image-button:focus-visible img { transform: none; }
     }
   </style>
 </head>
 <body>
   <main class="site-shell" data-od-id="image-archive-page">
     <section class="content" id="archive" data-od-id="archive-content">
-      <div class="content-head">
-        <h1 data-od-id="archive-heading">地点与时间</h1>
-      </div>
-
       <div class="archive-controls" id="search" data-od-id="archive-controls">
         <div class="region-filter" id="region-filter" role="group" aria-label="按主题筛选"></div>
       </div>
@@ -181,19 +167,36 @@
       return titleFromFilename(parts[archiveIndex + 1]);
     }
 
+    function parseArchiveFilename(filename, fallbackDate = "未标注日期", fallbackTag = "未分类") {
+      const match = filename.match(/^(\d{4})-(0[1-9]|1[0-2])-(.+)$/);
+      if (!match) {
+        return { title: titleFromFilename(filename), years: fallbackDate, tags: [fallbackTag] };
+      }
+
+      const segments = match[3].split("-").map((segment) => segment.trim()).filter(Boolean);
+      const title = titleFromFilename(segments.pop());
+      const tags = [...new Set(segments.map(titleFromFilename).filter(Boolean))];
+      return {
+        title,
+        years: `${match[1]}-${match[2]}`,
+        tags: tags.length ? tags : [fallbackTag]
+      };
+    }
+
     const archive = archiveFiles.map((file, index) => {
       const slug = file.name.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
+      const parsed = parseArchiveFilename(file.name, file.modified || "未标注日期", categoryFromPath(file.path));
       return {
         slug: slug || `archive-${index + 1}`,
-        title: titleFromFilename(file.name),
-        years: file.modified || "未标注日期",
-        region: categoryFromPath(file.path),
+        title: parsed.title,
+        years: parsed.years,
+        tags: parsed.tags,
         src: file.src,
         width: null,
         height: null
       };
     });
-    const regions = ["全部", ...new Set(archive.map((item) => item.region))];
+    const regions = ["全部", ...new Set(archive.flatMap((item) => item.tags))];
     const state = { region: "全部" };
     const grid = document.querySelector("#archive-grid");
     const emptyState = document.querySelector("#empty-state");
@@ -219,7 +222,7 @@
     }
 
     function filteredItems() {
-      return archive.filter((item) => state.region === "全部" || item.region === state.region);
+      return archive.filter((item) => state.region === "全部" || item.tags.includes(state.region));
     }
 
     function createCard(item) {
@@ -239,34 +242,31 @@
         image.width = item.width;
         image.height = item.height;
       }
-      image.loading = "lazy";
       image.alt = `${item.title}摄影作品`;
-      let revealQueued = false;
-      const revealImage = () => {
-        if (revealQueued) return;
-        revealQueued = true;
+      const updateImageAspect = () => {
         if (image.naturalWidth > 0 && image.naturalHeight > 0) {
           article.dataset.aspect = String(image.naturalWidth / image.naturalHeight);
           scheduleSparseLayout();
         }
-        requestAnimationFrame(() => requestAnimationFrame(() => image.classList.add("is-loaded")));
       };
-      image.addEventListener("load", revealImage, { once: true });
+      image.addEventListener("load", updateImageAspect, { once: true });
       image.addEventListener("error", () => {
         button.classList.add("is-error");
         button.disabled = true;
         button.setAttribute("aria-label", `${item.title}图片暂不可用`);
-        revealImage();
       }, { once: true });
       button.append(image);
-      if (image.complete) revealImage();
+      if (image.complete) updateImageAspect();
       const copy = document.createElement("div");
       copy.className = "card-copy";
       const title = document.createElement("h2");
       title.textContent = `#${item.title}`;
       const years = document.createElement("p");
       years.textContent = item.years;
-      copy.append(title, years);
+      const tags = document.createElement("p");
+      tags.className = "card-tags";
+      tags.textContent = item.tags.map((tag) => `#${tag}`).join(" ");
+      copy.append(title, years, tags);
       article.append(button, copy);
       return article;
     }
@@ -353,7 +353,7 @@
       }
       viewerImage.alt = `${item.title}摄影作品大图`;
       viewerTitle.textContent = item.title;
-      viewerMeta.textContent = `${item.years} · ${item.region}`;
+      viewerMeta.textContent = `${item.years} · ${item.tags.map((tag) => `#${tag}`).join(" · ")}`;
       viewerBackdrop.hidden = false;
       document.body.classList.add("viewer-open");
       siteShell.inert = true;

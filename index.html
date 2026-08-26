@@ -41,8 +41,7 @@
     .year-filter button:hover, .year-filter button:focus-visible { color: var(--fg); }
     .year-filter button.selected { color: var(--fg); border-bottom-color: var(--accent); }
     .year-filter button:focus-visible,
-    .empty-state button:focus-visible,
-    .viewer-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .empty-state button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
     .archive-grid { --column-count: 4; --column-gap: clamp(11px, 1.5vw, 22px); --row-gap: clamp(28px, 3vw, 44px); display: grid; grid-template-columns: repeat(var(--column-count), minmax(0, 1fr)); column-gap: var(--column-gap); align-items: start; }
     .archive-column { display: flex; min-width: 0; flex-direction: column; gap: var(--row-gap); }
@@ -69,8 +68,6 @@
     .viewer-image-wrap img { display: block; width: auto; max-width: 100%; height: auto; max-height: calc(100vh - 190px); object-fit: contain; image-rendering: auto; }
     .viewer-caption { padding-top: 16px; text-align: left; }
     .viewer-caption p { margin: 0; color: var(--muted); font-family: var(--font-mono); font-size: 11px; line-height: 1.7; }
-    .viewer-close { position: absolute; top: 10px; right: 12px; min-width: 54px; min-height: 44px; padding: 0; color: var(--muted); background: transparent; border: 0; cursor: pointer; font-size: 12px; letter-spacing: .02em; }
-    .viewer-close:hover { color: var(--fg); }
 
     @media (max-width: 980px) {
       .site-shell { width: min(100% - 24px, 980px); }
@@ -124,8 +121,7 @@
   </main>
 
   <div class="viewer-backdrop" id="viewer-backdrop" role="presentation" hidden>
-    <section class="viewer" role="dialog" aria-modal="true" aria-describedby="viewer-meta" data-od-id="image-viewer">
-      <button class="viewer-close" id="viewer-close" type="button" aria-label="关闭图片查看器">关闭</button>
+    <section class="viewer" role="dialog" aria-modal="true" aria-describedby="viewer-meta" tabindex="-1" data-od-id="image-viewer">
       <div class="viewer-image-wrap"><img id="viewer-image" src="" alt=""></div>
       <div class="viewer-caption" id="viewer-meta"><p id="viewer-tags"></p><p id="viewer-date"></p></div>
     </section>
@@ -190,10 +186,10 @@
     const yearFilter = document.querySelector("#year-filter");
     const siteShell = document.querySelector(".site-shell");
     const viewerBackdrop = document.querySelector("#viewer-backdrop");
+    const viewer = document.querySelector(".viewer");
     const viewerImage = document.querySelector("#viewer-image");
     const viewerTags = document.querySelector("#viewer-tags");
     const viewerDate = document.querySelector("#viewer-date");
-    const viewerClose = document.querySelector("#viewer-close");
     let previousFocus = null;
 
     function renderYears() {
@@ -290,7 +286,7 @@
       viewerBackdrop.hidden = false;
       document.body.classList.add("viewer-open");
       siteShell.inert = true;
-      viewerClose.focus();
+      viewer.focus();
     }
 
     function closeViewer() {
@@ -304,14 +300,9 @@
       state.year = "全部";
       render();
     });
-    viewerClose.addEventListener("click", closeViewer);
     viewerBackdrop.addEventListener("mousedown", (event) => { if (event.target === viewerBackdrop) closeViewer(); });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !viewerBackdrop.hidden) closeViewer();
-      if (event.key === "Tab" && !viewerBackdrop.hidden) {
-        event.preventDefault();
-        viewerClose.focus();
-      }
     });
     let resizeFrame = 0;
     window.addEventListener("resize", () => {

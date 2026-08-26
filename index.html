@@ -138,7 +138,7 @@
             name: {{ file.basename | jsonify }},
             src: {{ file.path | relative_url | jsonify }},
             path: {{ file.path | jsonify }},
-            modified: {{ file.modified_time | date: "%Y.%m.%d" | jsonify }}
+            modified: {{ file.modified_time | date: "%Y-%m-%d" | jsonify }}
           },
         {% endif %}
       {% endfor %}
@@ -149,20 +149,28 @@
     }
 
     function parseArchiveFilename(filename, fallbackDate = "未标注日期") {
-      const match = filename.match(/^(\d{4})-(0[1-9]|1[0-2])-(.+)$/);
-      if (!match) {
-        const title = titleFromFilename(filename);
-        return { title, years: fallbackDate, tags: [title] };
+      const normalizedFallbackDate = fallbackDate.replace(/\./g, "-");
+      const fullDateMatch = filename.match(/^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])-(.+)$/);
+      const monthMatch = fullDateMatch ? null : filename.match(/^(\d{4})-(0[1-9]|1[0-2])-(.+)$/);
+      const remainder = fullDateMatch?.[4] || monthMatch?.[3] || filename;
+      const segments = remainder.split("-").map((segment) => segment.trim()).filter(Boolean);
+      const identifier = titleFromFilename(segments.pop() || filename);
+      const tags = [...new Set(segments.map(titleFromFilename).filter(Boolean))];
+      const resolvedTags = tags.length ? tags : [identifier];
+      const title = resolvedTags.join(" ");
+
+      if (fullDateMatch) {
+        const date = `${fullDateMatch[1]}-${fullDateMatch[2]}-${fullDateMatch[3]}`;
+        return { title, date, month: date.slice(0, 7), tags: resolvedTags };
       }
 
-      const segments = match[3].split("-").map((segment) => segment.trim()).filter(Boolean);
-      const title = titleFromFilename(segments.pop());
-      const tags = [...new Set(segments.map(titleFromFilename).filter(Boolean))];
-      return {
-        title,
-        years: `${match[1]}-${match[2]}`,
-        tags: tags.length ? tags : [title]
-      };
+      if (monthMatch) {
+        const month = `${monthMatch[1]}-${monthMatch[2]}`;
+        return { title, date: month, month, tags: resolvedTags };
+      }
+
+      const fallbackMonth = normalizedFallbackDate.match(/^\d{4}-\d{2}/)?.[0] || normalizedFallbackDate;
+      return { title, date: normalizedFallbackDate, month: fallbackMonth, tags: resolvedTags };
     }
 
     const archive = archiveFiles.map((file, index) => {
@@ -171,8 +179,9 @@
       return {
         slug: slug || `archive-${index + 1}`,
         title: parsed.title,
-        years: parsed.years,
-        year: parsed.years.match(/^\d{4}/)?.[0] || "未标注",
+        date: parsed.date,
+        month: parsed.month,
+        year: parsed.date.match(/^\d{4}/)?.[0] || "未标注",
         tags: parsed.tags,
         src: file.src,
         width: null,
@@ -234,9 +243,9 @@
       button.append(image);
       const copy = document.createElement("div");
       copy.className = "card-copy";
-      const years = document.createElement("p");
-      years.textContent = item.years;
-      copy.append(years);
+      const month = document.createElement("p");
+      month.textContent = item.month;
+      copy.append(month);
       article.append(button, copy);
       return article;
     }
@@ -282,7 +291,7 @@
       }
       viewerImage.alt = `${item.title}摄影作品大图`;
       viewerTags.textContent = item.tags.map((tag) => `#${tag}`).join(" ");
-      viewerDate.textContent = item.years;
+      viewerDate.textContent = item.date;
       viewerBackdrop.hidden = false;
       document.body.classList.add("viewer-open");
       siteShell.inert = true;
